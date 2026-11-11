@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
@@ -16,10 +17,6 @@ import com.yausername.youtubedl_android.YoutubeDL
 import fi.iki.elonen.NanoHTTPD
 import java.util.UUID
 
-/**
- * ফোরগ্রাউন্ড সার্ভিস: yt-dlp চালু করে, লোকাল সার্ভার চালায়,
- * আর স্ক্রিন বন্ধ থাকলেও ডাউনলোড চালু রাখে।
- */
 class DownloadService : Service() {
 
     companion object {
@@ -29,6 +26,30 @@ class DownloadService : Service() {
         @Volatile var initError: String? = null
         private const val CHANNEL = "downloads"
         private const val NOTIF_ID = 1
+
+        /** ডাউনলোড শেষ বা ব্যর্থ হলে আলাদা নোটিফিকেশন দেয়। */
+        fun notifyDone(ctx: Context, title: String, success: Boolean) {
+            try {
+                val nm = ctx.getSystemService(NotificationManager::class.java)
+                nm.createNotificationChannel(
+                    NotificationChannel("done", "ডাউনলোড সম্পন্ন", NotificationManager.IMPORTANCE_DEFAULT)
+                )
+                val pi = PendingIntent.getActivity(
+                    ctx, 0, Intent(ctx, MainActivity::class.java),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+                val n = NotificationCompat.Builder(ctx, "done")
+                    .setSmallIcon(R.drawable.ic_download)
+                    .setContentTitle(if (success) "ডাউনলোড সম্পূর্ণ" else "ডাউনলোড ব্যর্থ")
+                    .setContentText(title)
+                    .setContentIntent(pi)
+                    .setAutoCancel(true)
+                    .build()
+                nm.notify((System.currentTimeMillis() % 100000).toInt() + 10, n)
+            } catch (e: Exception) {
+                // নোটিফিকেশন না দেখালেও ডাউনলোড ঠিক থাকবে
+            }
+        }
     }
 
     private var server: LocalServer? = null
@@ -51,7 +72,6 @@ class DownloadService : Service() {
 
         Thread {
             try {
-                // প্রথমবার Python/ffmpeg এক্সট্র্যাক্ট হতে কয়েক সেকেন্ড লাগে
                 YoutubeDL.init(applicationContext)
                 FFmpeg.init(applicationContext)
                 val t = UUID.randomUUID().toString().replace("-", "")
