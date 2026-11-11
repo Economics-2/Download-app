@@ -5,17 +5,21 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import org.json.JSONObject
 
-/** একটি WebView-তে লোকাল সার্ভারের UI দেখায়। */
 class MainActivity : Activity() {
 
     private lateinit var web: WebView
     private val handler = Handler(Looper.getMainLooper())
+    private var pendingShare: String? = null
+    private var pageLoaded = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,8 +28,20 @@ class MainActivity : Activity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.setBackgroundColor(Color.parseColor("#EDF3EE"))
+        web.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                if (url != null && url.startsWith("http://127.0.0.1")) {
+                    pageLoaded = true
+                    val p = pendingShare
+                    pendingShare = null
+                    if (p != null) deliver(p)
+                }
+            }
+        }
         setContentView(web)
         showMessage("প্রস্তুত হচ্ছে… প্রথমবার একটু সময় লাগতে পারে।")
+
+        pendingShare = extractLink(intent)
 
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -37,11 +53,36 @@ class MainActivity : Activity() {
         waitForServer()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val link = extractLink(intent) ?: return
+        if (pageLoaded) deliver(link) else pendingShare = link
+    }
+
+    /** শেয়ার করা লেখা থেকে প্রথম লিংকটি বের করে। */
+    private fun extractLink(i: Intent?): String? {
+        if (i == null || i.action != Intent.ACTION_SEND) return null
+        val text = i.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString() ?: return null
+        return Regex("https?://\\S+").find(text)?.value
+    }
+
+    private fun deliver(link: String) {
+        web.evaluateJavascript(
+            "window.handleShared && window.handleShared(" + JSONObject.quote(link) + ")", null
+        )
+    }
+
     private fun waitForServer() {
         handler.postDelayed({
             when {
-                DownloadService.ready ->
-                    web.loadUrl("http://127.0.0.1:${LocalServer.PORT}/?t=${DownloadService.token}")
+                DownloadService.ready -> {
+                    val share = pendingShare
+                    pendingShare = null
+                    var u = "http://127.0.0.1:${LocalServer.PORT}/?t=${DownloadService.token}"
+                    if (share != null) u += "&share=" + Uri.encode(share)
+                    web.loadUrl(u)
+                }
                 DownloadService.initError != null ->
                     showMessage("চালু করা যায়নি: ${DownloadService.initError}")
                 else -> waitForServer()
@@ -57,7 +98,6 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        // কোনো ডাউনলোড চলতে থাকলে সার্ভিস চালু থাকবে
         if (isFinishing && DownloadService.activeJobs == 0) {
             stopService(Intent(this, DownloadService::class.java))
         }
