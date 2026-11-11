@@ -26,11 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/**
- * ফোনের ভেতরে (127.0.0.1) চলা ছোট ওয়েব সার্ভার।
- * WebView-তে দেখানো index.html এই সার্ভারের /api/* কল করে, আর কাজ করে yt-dlp।
- * প্রতিটি API কলে গোপন টোকেন (X-Token) লাগে, যাতে ফোনের অন্য অ্যাপ এটি ব্যবহার করতে না পারে।
- */
+// ফোনের ভেতরে চলা লোকাল সার্ভার
 class LocalServer(
     private val ctx: Context,
     private val token: String,
