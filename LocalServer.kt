@@ -329,8 +329,10 @@ class LocalServer(
                     .put("exists", true)
             )
             job.status = "done"
+            DownloadService.notifyDone(ctx, title, true)
         } catch (e: Exception) {
             job.status = "error"
+            DownloadService.notifyDone(ctx, title, false)
             job.error = "ডাউনলোড ব্যর্থ হয়েছে। অন্য কোয়ালিটি বেছে আবার চেষ্টা করুন।"
         } finally {
             dir.deleteRecursively()
