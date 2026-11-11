@@ -1,0 +1,104 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Arrange project files
+        run: |
+          set -e
+          M=proj/app/src/main
+          J=$M/java/com/mhacademy/videodownloader
+          mkdir -p $J $M/assets $M/res/values $M/res/xml $M/res/drawable $M/res/mipmap-anydpi-v26
+          cp LocalServer.kt DownloadService.kt MainActivity.kt $J/
+          cp AndroidManifest.xml $M/
+          cp index.html $M/assets/
+          cp colors.xml strings.xml themes.xml $M/res/values/
+          cp network_security_config.xml $M/res/xml/
+          cp ic_download.xml ic_launcher_foreground.xml $M/res/drawable/
+          cp ic_launcher.xml $M/res/mipmap-anydpi-v26/
+          cp proguard-rules.pro proj/app/
+          cp settings.gradle.kts gradle.properties proj/
+          cat > proj/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.7.2" apply false
+              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+          }
+          EOF
+          cat > proj/app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace = "com.mhacademy.videodownloader"
+              compileSdk = 35
+              defaultConfig {
+                  applicationId = "com.mhacademy.videodownloader"
+                  minSdk = 29
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+                  ndk { abiFilters += listOf("arm64-v8a") }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+              packaging {
+                  jniLibs { useLegacyPackaging = true }
+                  resources {
+                      excludes += listOf(
+                          "META-INF/DEPENDENCIES", "META-INF/LICENSE", "META-INF/LICENSE.txt",
+                          "META-INF/NOTICE", "META-INF/NOTICE.txt", "META-INF/INDEX.LIST"
+                      )
+                  }
+              }
+          }
+          dependencies {
+              implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+              implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+              implementation("org.nanohttpd:nanohttpd:2.3.1")
+              implementation("androidx.core:core-ktx:1.13.1")
+          }
+          EOF
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: proj
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Rename APK
+        run: cp proj/app/build/outputs/apk/debug/app-debug.apk VideoDownloader.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VideoDownloader-apk
+          path: VideoDownloader.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest APK
+          files: VideoDownloader.apk
+          make_latest: true
