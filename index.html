@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ভিডিও ডাউনলোডার</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF3EE; --card:#FFFFFF; --ink:#14261D; --muted:#5A6E63;
+  --green:#0B5D45; --green-soft:#D9EBE1; --red:#D9363E; --line:#C9D8CE; --on-green:#fff;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0F1A15;--card:#17261E;--ink:#E6F0E9;--muted:#93A89B;--green:#3FBF92;--green-soft:#1F3A2D;--line:#2A4034;--on-green:#0F1A15}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hind Siliguri","Noto Sans Bengali","Kalpurush",system-ui,sans-serif;line-height:1.6;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:560px;margin:0 auto;padding:24px 18px 48px}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 6px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 18px}
+.tabs{display:flex;gap:6px;background:var(--green-soft);padding:5px;border-radius:14px;margin-bottom:20px}
+.tabs button{flex:1;background:transparent;color:var(--ink);padding:10px;border-radius:10px;font-size:1rem}
+.tabs button[aria-selected=true]{background:var(--card);font-weight:700}
+.field{display:flex;flex-direction:column;gap:10px}
+input[type=url]{width:100%;font:inherit;font-size:1.05rem;padding:16px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink)}
+input[type=url]:focus{outline:3px solid var(--green);outline-offset:1px;border-color:var(--green)}
+button{font:inherit;font-weight:500;border:0;border-radius:14px;padding:15px 18px;cursor:pointer;background:var(--green);color:var(--on-green);font-size:1.05rem}
+button:focus-visible,.tabs button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button:disabled{opacity:.55;cursor:wait}
+.err{color:var(--red);margin:12px 0 0;min-height:1.4em}
+[hidden]{display:none!important}
+.card{background:var(--card);border-radius:18px;padding:14px;margin-top:20px;border:1px solid var(--line)}
+.thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:var(--green-soft)}
+.title{font-weight:700;margin:12px 0 2px;font-size:1.1rem;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.92rem;margin:0}
+.group{margin-top:16px}
+.group h3{font-size:.95rem;margin:0 0 8px;color:var(--muted);font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips label{cursor:pointer;position:relative}
+.chips input{position:absolute;opacity:0}
+.chips span{display:inline-block;padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--card)}
+.chips input:checked+span{background:var(--green-soft);border-color:var(--green);font-weight:700}
+.chips input:focus-visible+span{outline:3px solid var(--green)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:16px;padding:12px;border-radius:12px;background:var(--green-soft);cursor:pointer}
+.check input{margin-top:6px;width:18px;height:18px;accent-color:var(--green)}
+.go{width:100%;background:var(--red);color:#fff;margin-top:18px}
+.bar{height:12px;background:var(--green-soft);border-radius:99px;overflow:hidden;margin:16px 0 6px}
+.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+a.save{display:block;text-align:center;text-decoration:none;background:var(--green);color:var(--on-green);padding:14px;border-radius:14px;font-weight:700;margin-top:12px}
+.note{font-size:.85rem;color:var(--muted);margin-top:26px}
+.hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.hist-head h2{font-size:1.2rem;margin:0}
+.link-btn{background:transparent;color:var(--red);padding:6px 10px;font-size:.95rem}
+.item{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}
+.item .row{display:flex;gap:8px;margin-top:10px}
+.item a.save,.item button{margin:0;flex:1;padding:11px;font-size:.98rem}
+.item button.del{background:transparent;color:var(--red);border:2px solid var(--line);flex:0 0 auto}
+.empty{text-align:center;color:var(--muted);padding:36px 10px}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>ভিডিও ডাউনলোডার</h1>
+  <p class="sub">লিংক পেস্ট করুন, কোয়ালিটি বেছে নিন, ডাউনলোড করুন।</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-dl" aria-selected="true">ডাউনলোড</button>
+    <button role="tab" id="tab-hist" aria-selected="false">ইতিহাস</button>
+  </div>
+
+  <section id="view-dl">
+    <div class="field">
+      <input id="url" type="url" inputmode="url" placeholder="ভিডিও বা প্লেলিস্টের লিংক পেস্ট করুন" autocomplete="off">
+      <button id="fetch">খুঁজুন</button>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+
+    <div class="card" id="result" hidden>
+      <img class="thumb" id="thumb" alt="">
+      <p class="title" id="title"></p>
+      <p class="meta" id="meta"></p>
+
+      <label class="check" id="plWrap" hidden>
+        <input type="checkbox" id="plAll">
+        <span id="plText"></span>
+      </label>
+
+      <div class="group">
+        <h3>কোয়ালিটি</h3>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="group" id="subsWrap" hidden>
+        <h3>সাবটাইটেল (ঐচ্ছিক, .srt ফাইল আলাদা আসবে)</h3>
+        <div class="chips" id="subs"></div>
+      </div>
+
+      <button class="go" id="download">ডাউনলোড শুরু করুন</button>
+
+      <div id="progress" hidden>
+        <div class="bar"><i id="fill"></i></div>
+        <p class="meta" id="pText"></p>
+        <a class="save" id="save" href="#" hidden>ফাইল সেভ করুন</a>
+      </div>
+    </div>
+    <p class="note"><button class="link-btn" id="upd" style="color:var(--green);padding-left:0">yt-dlp আপডেট করুন</button> <span id="updMsg"></span><br>কোনো সাইট কাজ না করলে আগে এটি চাপুন।</p>
+    <p class="note">শুধু নিজের ভিডিও বা যেসব কনটেন্ট ডাউনলোডের অনুমতি আছে সেগুলোই নামান। কপিরাইট ও প্ল্যাটফর্মের নীতিমালা মেনে চলা আপনার দায়িত্ব।</p>
+  </section>
+
+  <section id="view-hist" hidden>
+    <div class="hist-head">
+      <h2>ডাউনলোড ইতিহাস</h2>
+      <button class="link-btn" id="clearAll">তালিকা মুছুন</button>
+    </div>
+    <div id="histList"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const MAX = 50;
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+let current = "", info = null;
+
+const toBn = n => String(n).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+const fmtDur = s => s ? Math.floor(s/60) + ":" + String(s%60).padStart(2,"0") : "";
+function langName(c){ try { return new Intl.DisplayNames(["bn"],{type:"language"}).of(c) || c; } catch { return c; } }
+
+function el(tag, props = {}, ...kids){
+  const e = Object.assign(document.createElement(tag), props);
+  kids.forEach(k => e.append(k));
+  return e;
+}
+
+async function api(path, method = "GET", body){
+  const r = await fetch(path, {method, headers: {"Content-Type":"application/json", "X-Token": TOKEN}, body: body ? JSON.stringify(body) : undefined});
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.error || "কিছু একটা ভুল হয়েছে।");
+  return j;
+}
+
+/* ---------- ট্যাব ---------- */
+function showTab(name){
+  const hist = name === "hist";
+  $("view-dl").hidden = hist; $("view-hist").hidden = !hist;
+  $("tab-dl").setAttribute("aria-selected", !hist);
+  $("tab-hist").setAttribute("aria-selected", hist);
+  if(hist) loadHistory();
+}
+$("tab-dl").onclick = () => showTab("dl");
+$("tab-hist").onclick = () => showTab("hist");
+
+/* ---------- খোঁজা ---------- */
+function makeChip(type, name, value, text, checked, data = {}){
+  const input = el("input", {type, name, value, checked});
+  Object.assign(input.dataset, data);
+  return el("label", {}, input, el("span", {textContent: text}));
+}
+
+$("fetch").onclick = async () => {
+  $("err").textContent = ""; $("result").hidden = true;
+  current = $("url").value.trim();
+  $("fetch").disabled = true; $("fetch").textContent = "খোঁজা হচ্ছে…";
+  try{
+    info = await api("/api/info", "POST", {url: current});
+    $("thumb").src = info.thumbnail || ""; $("thumb").alt = info.title;
+    $("title").textContent = info.title;
+
+    const isPl = info.kind === "playlist";
+    $("meta").textContent = isPl
+      ? [info.uploader, toBn(info.count) + "টি ভিডিও"].filter(Boolean).join(" • ")
+      : [info.uploader, info.duration ? "সময়: " + toBn(fmtDur(info.duration)) : ""].filter(Boolean).join(" • ");
+
+    // প্লেলিস্ট চেকবক্স
+    $("plWrap").hidden = !(isPl || info.also_playlist);
+    $("plAll").checked = isPl;
+    $("plAll").disabled = isPl;
+    $("plText").textContent = isPl
+      ? `পুরো প্লেলিস্ট নামানো হবে (সর্বোচ্চ ${toBn(MAX)}টি, একটি জিপ ফাইলে)`
+      : `এই ভিডিওর পুরো প্লেলিস্টও নামান (সর্বোচ্চ ${toBn(MAX)}টি, জিপ ফাইলে)`;
+
+    // কোয়ালিটি
+    const q = $("chips"); q.replaceChildren();
+    q.append(makeChip("radio","q","best","সেরা কোয়ালিটি",true));
+    info.heights.forEach(h => q.append(makeChip("radio","q",String(h),toBn(h)+"p",false)));
+    q.append(makeChip("radio","q","audio", info.has_ffmpeg ? "শুধু অডিও (MP3)" : "শুধু অডিও", false));
+
+    // সাবটাইটেল
+    const s = $("subs"); s.replaceChildren();
+    info.subs.forEach(x => {
+      const label = langName(x.lang) + (x.auto === true ? " (অটো)" : "");
+      s.append(makeChip("checkbox","sub",x.lang,label,false,{auto: String(x.auto)}));
+    });
+    $("subsWrap").hidden = info.subs.length === 0;
+
+    $("progress").hidden = true; $("save").hidden = true; $("download").disabled = false;
+    $("result").hidden = false;
+  }catch(e){ $("err").textContent = e.message; }
+  $("fetch").disabled = false; $("fetch").textContent = "খুঁজুন";
+};
+
+/* ---------- ডাউনলোড ---------- */
+$("download").onclick = async () => {
+  $("err").textContent = "";
+  const q = document.querySelector("input[name=q]:checked").value;
+  const subs = [...document.querySelectorAll("input[name=sub]:checked")].map(i => ({
+    lang: i.value, auto: i.dataset.auto === "true" ? true : i.dataset.auto === "false" ? false : null
+  }));
+  const body = {
+    url: current,
+    kind: q === "audio" ? "audio" : "video",
+    height: /^\d+$/.test(q) ? q : null,
+    playlist: $("plAll").checked,
+    title: info.title,
+    subs
+  };
+  $("download").disabled = true; $("progress").hidden = false; $("save").hidden = true;
+  $("fill").style.width = "0"; $("pText").textContent = "শুরু হচ্ছে…";
+  try{
+    const {job} = await api("/api/download", "POST", body);
+    const timer = setInterval(async () => {
+      let s;
+      try { s = await api("/api/status/" + job); } catch { return; }
+      $("fill").style.width = (s.percent || 0) + "%";
+      if(s.status === "downloading"){
+        const part = s.total > 1 ? `${toBn(s.index)}/${toBn(s.total)} • ` : "";
+        $("pText").textContent = part + toBn(Math.round(s.percent || 0)) + "%" + (s.speed ? " • " + s.speed : "") + (s.eta ? " • বাকি " + s.eta : "");
+      }
+      if(s.status === "processing") $("pText").textContent = "ফাইল তৈরি হচ্ছে…";
+      if(s.status === "done"){
+        clearInterval(timer);
+        $("pText").textContent = "ডাউনলোড সম্পূর্ণ। ফোনের Downloads/VideoDownloader ফোল্ডারে সেভ হয়েছে।"; $("download").disabled = false;
+      }
+      if(s.status === "error"){
+        clearInterval(timer); $("pText").textContent = ""; $("err").textContent = s.error; $("download").disabled = false;
+      }
+    }, 1000);
+  }catch(e){ $("err").textContent = e.message; $("download").disabled = false; }
+};
+
+$("upd").onclick = async () => {
+  $("upd").disabled = true; $("updMsg").textContent = "আপডেট হচ্ছে…";
+  try{
+    const r = await api("/api/update", "POST", {});
+    $("updMsg").textContent = r.status === "DONE" ? "আপডেট হয়েছে (" + r.version + ")" : "ইতিমধ্যে সর্বশেষ (" + r.version + ")";
+  }catch(e){ $("updMsg").textContent = e.message; }
+  $("upd").disabled = false;
+};
+
+/* ---------- ইতিহাস ---------- */
+const KIND = {video: "ভিডিও", audio: "অডিও", playlist: "প্লেলিস্ট"};
+
+async function loadHistory(){
+  const box = $("histList"); box.replaceChildren();
+  let items = [];
+  try { items = await api("/api/history"); } catch(e){ box.append(el("p",{className:"empty",textContent:e.message})); return; }
+  $("clearAll").hidden = items.length === 0;
+  if(!items.length){ box.append(el("p",{className:"empty",textContent:"এখনো কিছু ডাউনলোড করা হয়নি।"})); return; }
+
+  items.forEach(it => {
+    const mb = toBn((it.size / 1048576).toFixed(1)) + " MB";
+    const when = new Date(it.time).toLocaleString("bn-BD", {dateStyle:"medium", timeStyle:"short"});
+    const kind = KIND[it.kind] + (it.kind === "video" ? " " + (it.quality === "best" ? "(সেরা)" : toBn(it.quality)) : "");
+    const subs = it.subs && it.subs.length ? " • সাবটাইটেল: " + it.subs.join(", ") : "";
+
+    const row = el("div", {className: "row"});
+    row.append(el("span", {className:"meta", textContent:"Downloads/VideoDownloader ফোল্ডারে", style:"flex:1;align-self:center"}));
+    const del = el("button", {className:"del", textContent:"তালিকা থেকে সরান"});
+    del.onclick = async () => { await api("/api/history/" + it.id, "DELETE"); loadHistory(); };
+    row.append(del);
+
+    box.append(el("div", {className:"item"},
+      el("p", {className:"title", textContent: it.title, style:"margin-top:0"}),
+      el("p", {className:"meta", textContent: `${kind} • ${mb} • ${when}${subs}`}),
+      row
+    ));
+  });
+}
+
+$("clearAll").onclick = async () => {
+  if(!confirm("ইতিহাসের তালিকা মুছে যাবে। ডাউনলোড করা ফাইল ফোনেই থাকবে। নিশ্চিত?")) return;
+  await api("/api/history", "DELETE"); loadHistory();
+};
+</script>
+</body>
+</html>
