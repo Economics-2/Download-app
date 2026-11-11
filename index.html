@@ -284,5 +284,24 @@ $("clearAll").onclick = async () => {
   await api("/api/history", "DELETE"); loadHistory();
 };
 </script>
+  <script>
+window.handleShared = async function(url){
+  showTab("dl");
+  $("url").value = url;
+  await $("fetch").onclick();
+  // শুধু একক ভিডিও হলে নিজে থেকে সেরা কোয়ালিটিতে শুরু হবে।
+  // প্লেলিস্ট হলে আপনি নিজে বেছে নেবেন।
+  if(!$("result").hidden && info && info.kind === "video"){
+    $("download").click();
+  }
+};
+(function(){
+  const s = new URLSearchParams(location.search).get("share");
+  if(s){
+    history.replaceState(null, "", location.pathname + "?t=" + encodeURIComponent(TOKEN));
+    window.handleShared(s);
+  }
+})();
+</script>
 </body>
 </html>
